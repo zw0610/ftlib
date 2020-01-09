@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ftlib-test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      job: ftlib-test-nrs12
+  template:
+    metadata:
+      labels:
+        job: ftlib-test-nrs12
+    spec:
+      containers:
+        - image: test.caicloudprivatetest.com/library/pytorch-golang:latest
+          imagePullPolicy: IfNotPresent
+          name: worker
+          ports:
+          - containerPort: 7946
+            name: gossip
+          - containerPort: 22
+            name: ssh
+          command: ["python", "/crystal/ftlib/ftlib/consensus/gossip/test.py"]
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          volumeMounts:
+          - name: crystal
+            mountPath: /crystal
+      volumes:
+        - name: crystal
+          persistentVolumeClaim:
+            claimName: nccl-shared-storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ftlib-test-nrs12
+  labels:
+    job: ftlib-test-nrs12
+spec:
+  ports:
+  - port: 7946
+    protocol: TCP
+  selector:
+    job: ftlib-test-nrs12
